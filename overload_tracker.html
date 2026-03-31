@@ -155,23 +155,17 @@
       <div class="two-col">
         <div class="field">
           <label>Reps</label>
-          <input type="number" id="entry-reps" min="1" max="100" placeholder="8" inputmode="numeric" oninput="updateOrm(); updateWeightPlaceholder()">
+          <input type="number" id="entry-reps" min="1" max="100" placeholder="8" inputmode="numeric" oninput="updateWeightPlaceholder()">
         </div>
         <div class="field">
           <label>Weight (lbs)</label>
-          <input type="number" id="entry-weight" min="0" step="2.5" placeholder="—" inputmode="decimal" oninput="updateOrm()">
+          <input type="number" id="entry-weight" min="0" step="2.5" placeholder="—" inputmode="decimal">
         </div>
       </div>
 
-      <div class="two-col">
-        <div class="field">
-          <label>Est. 1RM</label>
-          <div class="orm-display" id="orm-display">—</div>
-        </div>
-        <div class="field">
-          <label>Notes</label>
-          <input type="text" id="entry-notes" placeholder="Optional">
-        </div>
+      <div class="field">
+        <label>Notes</label>
+        <input type="text" id="entry-notes" placeholder="Optional">
       </div>
 
       <div class="btn-row">
@@ -261,14 +255,6 @@ function orm(reps, weight) {
   return Math.round(weight * (1 + reps / 30) * 10) / 10;
 }
 
-function updateOrm() {
-  const reps   = parseFloat(document.getElementById('entry-reps').value);
-  const weight = parseFloat(document.getElementById('entry-weight').value);
-  const val    = orm(reps, weight);
-  const el     = document.getElementById('orm-display');
-  if (val) { el.textContent = val + ' lbs'; el.classList.add('has-value'); }
-  else     { el.textContent = '—'; el.classList.remove('has-value'); }
-}
 
 function onGroupChange() {
   const group = document.getElementById('entry-group').value;
@@ -309,8 +295,6 @@ function logEntry() {
   document.getElementById('entry-exercise').innerHTML = '<option value="">Select muscle group first...</option>';
   ['entry-reps','entry-weight','entry-notes'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('entry-weight').placeholder = '—';
-  document.getElementById('orm-display').textContent = '—';
-  document.getElementById('orm-display').classList.remove('has-value');
 
   renderLog();
   syncDashExercises();
@@ -323,8 +307,6 @@ function clearEntry() {
   document.getElementById('entry-exercise').innerHTML = '<option value="">Select muscle group first...</option>';
   ['entry-reps','entry-weight','entry-notes'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('entry-weight').placeholder = '—';
-  document.getElementById('orm-display').textContent = '—';
-  document.getElementById('orm-display').classList.remove('has-value');
 }
 
 function deleteEntry(id) {
@@ -352,13 +334,12 @@ function renderLog() {
       <td>${e.exercise}${isPR ? '<span class="pr-badge">PR</span>' : ''}</td>
       <td>${e.reps}</td>
       <td class="mono">${e.weight}</td>
-      <td class="mono">${e.orm ? e.orm : '—'}</td>
       <td><button class="del-btn" onclick="deleteEntry(${e.id})">✕</button></td>
     </tr>`;
   }).join('');
 
   wrap.innerHTML = `<div class="log-wrap"><table class="log-table">
-    <thead><tr><th>Date</th><th>Exercise</th><th>Reps</th><th>Wt</th><th>1RM</th><th></th></tr></thead>
+    <thead><tr><th>Date</th><th>Exercise</th><th>Reps</th><th>Wt</th><th></th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
 }
