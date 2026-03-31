@@ -194,6 +194,10 @@
     </div>
     <div class="section-label" style="margin-bottom:12px;">Recent</div>
     <div id="dash-recent"></div>
+    <div id="dash-rep-prs-wrap" style="display:none;">
+      <div class="section-label" style="margin-bottom:12px;">PRs by Rep Range</div>
+      <div id="dash-rep-prs"></div>
+    </div>
     <div class="section-label" style="margin-bottom:12px;">All-time Records</div>
     <div id="dash-prs"></div>
   </div>
@@ -364,13 +368,36 @@ function renderDashboard() {
     recent.innerHTML = '<div class="empty" style="padding:20px 0;">No entries yet.</div>';
   } else {
     let rows = slice.map(e => {
-      const d    = e.date ? new Date(e.date + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'}) : '—';
-      const diff = (e.orm && best1rm) ? (e.orm === best1rm ? '<span class="pr-badge">PR</span>' : (e.orm - best1rm).toFixed(1) + ' lbs') : '—';
-      return `<tr><td>${d}</td><td>${e.exercise}</td><td>${e.reps}</td><td class="mono">${e.weight}</td><td class="mono">${e.orm||'—'}</td><td style="font-size:12px;">${diff}</td></tr>`;
+      const d = e.date ? new Date(e.date + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'}) : '—';
+      return `<tr><td>${d}</td><td>${e.exercise}</td><td>${e.reps}</td><td class="mono">${e.weight}</td><td class="mono">${e.orm||'—'}</td></tr>`;
     }).join('');
     recent.innerHTML = `<table class="dash-table">
-      <thead><tr><th>Date</th><th>Exercise</th><th>Reps</th><th>Wt</th><th>1RM</th><th>vs Best</th></tr></thead>
+      <thead><tr><th>Date</th><th>Exercise</th><th>Reps</th><th>Wt</th><th>1RM</th></tr></thead>
       <tbody>${rows}</tbody></table>`;
+  }
+
+  // PRs by rep range — only show when a specific exercise is selected
+  const repPrsWrap = document.getElementById('dash-rep-prs-wrap');
+  const repPrsEl   = document.getElementById('dash-rep-prs');
+  if (ex) {
+    const repMap = {};
+    filtered.forEach(e => {
+      const r = e.reps;
+      if (!r) return;
+      if (!repMap[r] || e.weight > repMap[r].weight) repMap[r] = e;
+    });
+    const repRows = Object.keys(repMap)
+      .map(Number).sort((a,b) => a - b)
+      .map(r => {
+        const e = repMap[r];
+        return `<tr><td>${r} rep${r>1?'s':''}</td><td class="mono">${e.weight} lbs</td><td class="mono">${e.orm ? e.orm + ' lbs' : '—'}</td></tr>`;
+      }).join('');
+    repPrsEl.innerHTML = repRows
+      ? `<table class="dash-table"><thead><tr><th>Reps</th><th>Best Weight</th><th>Est. 1RM</th></tr></thead><tbody>${repRows}</tbody></table>`
+      : '<div class="empty" style="padding:20px 0;">No data yet.</div>';
+    repPrsWrap.style.display = 'block';
+  } else {
+    repPrsWrap.style.display = 'none';
   }
 
   const prs    = document.getElementById('dash-prs');
