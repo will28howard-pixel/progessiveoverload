@@ -147,16 +147,14 @@
 
       <div class="field">
         <label>Exercise</label>
-        <select id="entry-exercise">
+        <select id="entry-exercise" onchange="updateSuggestion()">
           <option value="">Select muscle group first...</option>
         </select>
       </div>
 
-      <div class="three-col">
-        <div class="field">
-          <label>Sets</label>
-          <input type="number" id="entry-sets" min="1" max="20" placeholder="3" inputmode="numeric">
-        </div>
+      <div id="overload-suggestion" style="display:none; margin-bottom:12px; padding:10px 13px; background:var(--bg); border:1px solid var(--border2); font-size:13px; color:var(--text2); font-family:var(--ff-mono);"></div>
+
+      <div class="two-col">
         <div class="field">
           <label>Reps</label>
           <input type="number" id="entry-reps" min="1" max="100" placeholder="8" inputmode="numeric" oninput="updateOrm()">
@@ -284,25 +282,37 @@ function onGroupChange() {
       o.value = ex; o.textContent = ex; sel.appendChild(o);
     });
   }
+  updateSuggestion();
+}
+
+function updateSuggestion() {
+  const exercise = document.getElementById('entry-exercise').value;
+  const el       = document.getElementById('overload-suggestion');
+  if (!exercise) { el.style.display = 'none'; return; }
+  const last = entries.find(e => e.exercise === exercise);
+  if (!last) { el.style.display = 'none'; return; }
+  const d = last.date ? new Date(last.date + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'}) : '';
+  el.textContent = `Last (${d}): ${last.reps} reps @ ${last.weight} lbs${last.orm ? '  ·  1RM ' + last.orm + ' lbs' : ''}`;
+  el.style.display = 'block';
 }
 
 function logEntry() {
   const date     = document.getElementById('entry-date').value;
   const group    = document.getElementById('entry-group').value;
   const exercise = document.getElementById('entry-exercise').value;
-  const sets     = parseFloat(document.getElementById('entry-sets').value);
   const reps     = parseFloat(document.getElementById('entry-reps').value);
   const weight   = parseFloat(document.getElementById('entry-weight').value);
   const notes    = document.getElementById('entry-notes').value.trim();
 
   if (!exercise || !reps || !weight) { showToast('Fill in exercise, reps & weight'); return; }
 
-  entries.unshift({ id: Date.now(), date, group, exercise, sets: sets || '', reps, weight, orm: orm(reps, weight), notes });
+  entries.unshift({ id: Date.now(), date, group, exercise, reps, weight, orm: orm(reps, weight), notes });
   saveEntries();
 
   document.getElementById('entry-group').value = '';
   document.getElementById('entry-exercise').innerHTML = '<option value="">Select muscle group first...</option>';
-  ['entry-sets','entry-reps','entry-weight','entry-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('overload-suggestion').style.display = 'none';
+  ['entry-reps','entry-weight','entry-notes'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('orm-display').textContent = '—';
   document.getElementById('orm-display').classList.remove('has-value');
 
@@ -315,7 +325,8 @@ function clearEntry() {
   document.getElementById('entry-date').value = today();
   document.getElementById('entry-group').value = '';
   document.getElementById('entry-exercise').innerHTML = '<option value="">Select muscle group first...</option>';
-  ['entry-sets','entry-reps','entry-weight','entry-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('overload-suggestion').style.display = 'none';
+  ['entry-reps','entry-weight','entry-notes'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('orm-display').textContent = '—';
   document.getElementById('orm-display').classList.remove('has-value');
 }
@@ -343,7 +354,6 @@ function renderLog() {
     return `<tr>
       <td>${d}</td>
       <td>${e.exercise}${isPR ? '<span class="pr-badge">PR</span>' : ''}</td>
-      <td>${e.sets || '—'}</td>
       <td>${e.reps}</td>
       <td class="mono">${e.weight}</td>
       <td class="mono">${e.orm ? e.orm : '—'}</td>
@@ -352,7 +362,7 @@ function renderLog() {
   }).join('');
 
   wrap.innerHTML = `<div class="log-wrap"><table class="log-table">
-    <thead><tr><th>Date</th><th>Exercise</th><th>Sets</th><th>Reps</th><th>Wt</th><th>1RM</th><th></th></tr></thead>
+    <thead><tr><th>Date</th><th>Exercise</th><th>Reps</th><th>Wt</th><th>1RM</th><th></th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
 }
