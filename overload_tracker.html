@@ -109,7 +109,14 @@
   .group-label { font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text2); margin-bottom: 10px; }
   .group-block { margin-bottom: 24px; }
   .ex-pills { display: flex; flex-wrap: wrap; gap: 8px; }
-  .ex-pill { background: var(--bg2); border: 0.5px solid var(--border); border-radius: 20px; padding: 7px 14px; font-size: 13px; color: var(--text); }
+  .ex-pill { display: flex; align-items: center; gap: 7px; background: var(--bg2); border: 1px solid var(--border2); padding: 7px 10px 7px 14px; font-size: 13px; color: var(--text); }
+  .ex-pill-del { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 12px; padding: 0; line-height: 1; opacity: 0.5; font-family: var(--ff-sans); }
+  .ex-pill-del:active { opacity: 1; color: #e24b4a; }
+  .ex-add-row { display: flex; gap: 8px; margin-top: 10px; }
+  .ex-add-input { flex: 1; background: var(--bg); border: 1px solid var(--border2); padding: 8px 12px; font-size: 13px; color: var(--text); font-family: var(--ff-sans); outline: none; }
+  .ex-add-input:focus { border-color: var(--text2); }
+  .ex-add-btn { background: none; border: 1px solid var(--border2); padding: 8px 14px; font-size: 12px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text2); cursor: pointer; font-family: var(--ff-sans); }
+  .ex-add-btn:active { background: var(--bg3); }
 
   /* TOAST */
   .toast { position: fixed; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--bg); font-size: 13px; font-weight: 500; padding: 10px 20px; border-radius: 10px; opacity: 0; transition: opacity 0.2s, transform 0.2s; pointer-events: none; white-space: nowrap; z-index: 999; }
@@ -216,7 +223,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const EXERCISES = {
+const DEFAULT_EXERCISES = {
   CHEST:     ["Bench Press","Incline Bench Press","Decline Bench Press","DB Bench Press","Incline DB Press","Cable Fly","Dip"],
   BACK:      ["Deadlift","Barbell Row","Lat Pulldown","Cable Row","Pull-Up","Chin-Up","DB Row","T-Bar Row"],
   LEGS:      ["Squat","Front Squat","Romanian Deadlift","Leg Press","Leg Curl","Leg Extension","Calf Raise","Bulgarian Split Squat"],
@@ -225,8 +232,25 @@ const EXERCISES = {
   CORE:      ["Plank","Cable Crunch","Ab Wheel","Hanging Leg Raise"]
 };
 
-const ALL_EX = Object.values(EXERCISES).flat().sort();
+let EXERCISES = {};
 let entries = [];
+
+function loadExercises() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('overload_exercises'));
+    EXERCISES = saved || JSON.parse(JSON.stringify(DEFAULT_EXERCISES));
+  } catch(e) {
+    EXERCISES = JSON.parse(JSON.stringify(DEFAULT_EXERCISES));
+  }
+}
+
+function saveExercises() {
+  try { localStorage.setItem('overload_exercises', JSON.stringify(EXERCISES)); } catch(e) {}
+}
+
+function allExercises() {
+  return Object.values(EXERCISES).flat().sort();
+}
 
 function loadEntries() {
   try { entries = JSON.parse(localStorage.getItem('overload_entries') || '[]'); } catch(e) { entries = []; }
@@ -401,7 +425,7 @@ function renderDashboard() {
   }
 
   const prs    = document.getElementById('dash-prs');
-  const exList = ex ? [ex] : ALL_EX;
+  const exList = ex ? [ex] : allExercises();
   const prRows = exList.map(exercise => {
     const exE = entries.filter(e => e.exercise === exercise);
     if (!exE.length) return '';
@@ -420,8 +444,40 @@ function renderExercises() {
   wrap.innerHTML = Object.entries(EXERCISES).map(([group, exs]) => `
     <div class="group-block">
       <div class="group-label">${group}</div>
-      <div class="ex-pills">${exs.map(ex => `<div class="ex-pill">${ex}</div>`).join('')}</div>
+      <div class="ex-pills">${exs.map(ex => `
+        <div class="ex-pill">
+          ${ex}
+          <button class="ex-pill-del" onclick="removeExercise('${group}', ${JSON.stringify(ex)})" title="Remove">✕</button>
+        </div>`).join('')}
+      </div>
+      <div class="ex-add-row">
+        <input class="ex-add-input" id="add-input-${group}" placeholder="Add exercise..." onkeydown="if(event.key==='Enter') addExercise('${group}')">
+        <button class="ex-add-btn" onclick="addExercise('${group}')">+ Add</button>
+      </div>
     </div>`).join('');
+}
+
+function addExercise(group) {
+  const input = document.getElementById('add-input-' + group);
+  const name  = input.value.trim();
+  if (!name) return;
+  if (EXERCISES[group].map(e => e.toLowerCase()).includes(name.toLowerCase())) {
+    showToast('Already exists'); return;
+  }
+  EXERCISES[group].push(name);
+  saveExercises();
+  renderExercises();
+  onGroupChange();
+  showToast('Exercise added');
+}
+
+function removeExercise(group, name) {
+  if (!confirm(`Remove "${name}"?`)) return;
+  EXERCISES[group] = EXERCISES[group].filter(e => e !== name);
+  saveExercises();
+  renderExercises();
+  onGroupChange();
+  showToast('Exercise removed');
 }
 
 function showView(v, tab) {
@@ -443,6 +499,7 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2000);
 }
 
+loadExercises();
 loadEntries();
 document.getElementById('entry-date').value = today();
 renderLog();
