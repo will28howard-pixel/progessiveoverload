@@ -118,6 +118,13 @@
   .ex-add-btn { background: none; border: 1px solid var(--border2); padding: 8px 14px; font-size: 12px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text2); cursor: pointer; font-family: var(--ff-sans); }
   .ex-add-btn:active { background: var(--bg3); }
 
+  /* AUTH BAR */
+  .auth-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text2); flex-shrink: 0; }
+  .auth-bar-user { display: flex; align-items: center; gap: 7px; font-family: var(--ff-mono); font-size: 11px; }
+  .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #4caf50; flex-shrink: 0; }
+  .auth-bar-btn { background: none; border: none; font-size: 12px; font-weight: 500; color: var(--text2); cursor: pointer; font-family: var(--ff-sans); padding: 0; letter-spacing: 0.03em; }
+  .auth-bar-btn:active { opacity: 0.6; }
+
   /* TOAST */
   .toast { position: fixed; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--bg); font-size: 13px; font-weight: 500; padding: 10px 20px; border-radius: 10px; opacity: 0; transition: opacity 0.2s, transform 0.2s; pointer-events: none; white-space: nowrap; z-index: 999; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -126,6 +133,10 @@
 <body>
 
 <div class="app">
+  <div class="auth-bar">
+    <div class="auth-bar-user" id="auth-user"></div>
+    <button class="auth-bar-btn" id="auth-btn" onclick="handleAuthBtn()">Sign in to sync</button>
+  </div>
   <div id="view-log" class="view active">
     <div class="entry-card">
       <div class="section-label" style="margin-bottom:14px;">New Entry</div>
@@ -212,7 +223,58 @@
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
+import { initializeApp }                                          from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, onSnapshot }                 from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB9-5nQ9_YENeT7Qy4Rop623y8JBdjqlhI",
+  authDomain: "progressive-overload-tra-f4fbf.firebaseapp.com",
+  projectId: "progressive-overload-tra-f4fbf",
+  storageBucket: "progressive-overload-tra-f4fbf.firebasestorage.app",
+  messagingSenderId: "826816730925",
+  appId: "1:826816730925:web:ca7bb0411ff99ddb1a25a4"
+};
+
+const fbApp   = initializeApp(firebaseConfig);
+const db      = getFirestore(fbApp);
+const auth    = getAuth(fbApp);
+const provider = new GoogleAuthProvider();
+let cloudUnsub = null;
+
+async function saveToCloud() {
+  if (!auth.currentUser) return;
+  try {
+    await setDoc(doc(db, 'users', auth.currentUser.uid), { entries, exercises: EXERCISES });
+  } catch(e) {}
+}
+
+onAuthStateChanged(auth, user => {
+  const userEl = document.getElementById('auth-user');
+  const btn    = document.getElementById('auth-btn');
+  if (user) {
+    userEl.innerHTML = `<span class="sync-dot"></span>${user.email}`;
+    btn.textContent  = 'Sign out';
+    if (cloudUnsub) cloudUnsub();
+    cloudUnsub = onSnapshot(doc(db, 'users', user.uid), snap => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+      if (data.entries)   { entries = data.entries;       localStorage.setItem('overload_entries',   JSON.stringify(entries));   renderLog(); syncDashExercises(); }
+      if (data.exercises) { EXERCISES = data.exercises;   localStorage.setItem('overload_exercises', JSON.stringify(EXERCISES)); renderExercises(); onGroupChange(); }
+    });
+  } else {
+    userEl.innerHTML = '';
+    btn.textContent  = 'Sign in to sync';
+    if (cloudUnsub) { cloudUnsub(); cloudUnsub = null; }
+  }
+});
+
+window.handleAuthBtn = async function() {
+  if (auth.currentUser) { await signOut(auth); }
+  else { try { await signInWithPopup(auth, provider); } catch(e) { showToast('Sign in failed'); } }
+};
+
 const DEFAULT_EXERCISES = {
   CHEST:     ["Bench Press","Incline Bench Press","Decline Bench Press","DB Bench Press","Incline DB Press","Cable Fly","Dip"],
   BACK:      ["Deadlift","Barbell Row","Lat Pulldown","Cable Row","Pull-Up","Chin-Up","DB Row","T-Bar Row"],
@@ -236,6 +298,7 @@ function loadExercises() {
 
 function saveExercises() {
   try { localStorage.setItem('overload_exercises', JSON.stringify(EXERCISES)); } catch(e) {}
+  saveToCloud();
 }
 
 function allExercises() {
@@ -248,6 +311,7 @@ function loadEntries() {
 
 function saveEntries() {
   try { localStorage.setItem('overload_entries', JSON.stringify(entries)); } catch(e) {}
+  saveToCloud();
 }
 
 function orm(reps, weight) {
@@ -485,6 +549,17 @@ function showToast(msg) {
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2000);
 }
+
+// Expose functions to HTML onclick handlers
+window.onGroupChange         = onGroupChange;
+window.updateWeightPlaceholder = updateWeightPlaceholder;
+window.logEntry              = logEntry;
+window.clearEntry            = clearEntry;
+window.deleteEntry           = deleteEntry;
+window.renderDashboard       = renderDashboard;
+window.showView              = showView;
+window.addExercise           = addExercise;
+window.removeExercise        = removeExercise;
 
 loadExercises();
 loadEntries();
