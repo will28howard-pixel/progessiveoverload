@@ -258,10 +258,25 @@ onAuthStateChanged(auth, user => {
     btn.textContent  = 'Sign out';
     if (cloudUnsub) cloudUnsub();
     cloudUnsub = onSnapshot(doc(db, 'users', user.uid), snap => {
-      if (!snap.exists()) return;
+      if (!snap.exists()) {
+        // No cloud data yet — push local data up
+        saveToCloud();
+        return;
+      }
       const data = snap.data();
-      if (data.entries)   { entries = data.entries;       localStorage.setItem('overload_entries',   JSON.stringify(entries));   renderLog(); syncDashExercises(); }
-      if (data.exercises) { EXERCISES = data.exercises;   localStorage.setItem('overload_exercises', JSON.stringify(EXERCISES)); renderExercises(); onGroupChange(); }
+      const cloudEntries = data.entries || [];
+      // Merge: keep all unique entries from both cloud and local, prefer cloud on conflict
+      const merged = [...cloudEntries];
+      entries.forEach(local => {
+        if (!merged.find(c => c.id === local.id)) merged.push(local);
+      });
+      merged.sort((a, b) => b.id - a.id);
+      entries = merged;
+      localStorage.setItem('overload_entries', JSON.stringify(entries));
+      renderLog(); syncDashExercises();
+      if (data.exercises) { EXERCISES = data.exercises; localStorage.setItem('overload_exercises', JSON.stringify(EXERCISES)); renderExercises(); onGroupChange(); }
+      // Push merged result back to cloud to keep everything in sync
+      saveToCloud();
     });
   } else {
     userEl.innerHTML = '';
