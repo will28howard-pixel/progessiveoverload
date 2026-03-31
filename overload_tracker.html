@@ -225,7 +225,7 @@
 
 <script type="module">
 import { initializeApp }                                          from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, setDoc, onSnapshot }                 from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 const firebaseConfig = {
@@ -237,9 +237,9 @@ const firebaseConfig = {
   appId: "1:826816730925:web:ca7bb0411ff99ddb1a25a4"
 };
 
-const fbApp   = initializeApp(firebaseConfig);
-const db      = getFirestore(fbApp);
-const auth    = getAuth(fbApp);
+const fbApp    = initializeApp(firebaseConfig);
+const db       = getFirestore(fbApp);
+const auth     = getAuth(fbApp);
 const provider = new GoogleAuthProvider();
 let cloudUnsub = null;
 
@@ -247,37 +247,36 @@ async function saveToCloud() {
   if (!auth.currentUser) return;
   try {
     await setDoc(doc(db, 'users', auth.currentUser.uid), { entries, exercises: EXERCISES });
-  } catch(e) {}
+  } catch(e) { console.error('saveToCloud error', e); }
 }
 
-onAuthStateChanged(auth, user => {
+function applyCloudData(data) {
+  if (data.entries)   { entries = data.entries;     localStorage.setItem('overload_entries',   JSON.stringify(entries));   renderLog(); syncDashExercises(); }
+  if (data.exercises) { EXERCISES = data.exercises; localStorage.setItem('overload_exercises', JSON.stringify(EXERCISES)); renderExercises(); onGroupChange(); }
+}
+
+onAuthStateChanged(auth, async user => {
   const userEl = document.getElementById('auth-user');
   const btn    = document.getElementById('auth-btn');
   if (user) {
     userEl.innerHTML = `<span class="sync-dot"></span>${user.email}`;
     btn.textContent  = 'Sign out';
+
+    // Step 1: one-time fetch to handle initial sign-in
+    const snap = await getDoc(doc(db, 'users', user.uid));
+    if (snap.exists()) {
+      applyCloudData(snap.data());   // cloud has data → use it
+    } else {
+      await saveToCloud();           // cloud is empty → push local data up
+    }
+
+    // Step 2: listen for changes made on other devices (read-only, never write)
     if (cloudUnsub) cloudUnsub();
     cloudUnsub = onSnapshot(doc(db, 'users', user.uid), snap => {
-      if (!snap.exists()) {
-        // No cloud data yet — push local data up
-        saveToCloud();
-        return;
-      }
-      const data = snap.data();
-      const cloudEntries = data.entries || [];
-      // Merge: keep all unique entries from both cloud and local, prefer cloud on conflict
-      const merged = [...cloudEntries];
-      entries.forEach(local => {
-        if (!merged.find(c => c.id === local.id)) merged.push(local);
-      });
-      merged.sort((a, b) => b.id - a.id);
-      entries = merged;
-      localStorage.setItem('overload_entries', JSON.stringify(entries));
-      renderLog(); syncDashExercises();
-      if (data.exercises) { EXERCISES = data.exercises; localStorage.setItem('overload_exercises', JSON.stringify(EXERCISES)); renderExercises(); onGroupChange(); }
-      // Push merged result back to cloud to keep everything in sync
-      saveToCloud();
+      if (snap.metadata.hasPendingWrites) return; // skip our own writes
+      if (snap.exists()) applyCloudData(snap.data());
     });
+
   } else {
     userEl.innerHTML = '';
     btn.textContent  = 'Sign in to sync';
