@@ -130,7 +130,7 @@
   .btn-del-routine:active { background: var(--bg3); }
 
   .new-routine-form { background: var(--bg2); border: 1px solid var(--border2); padding: 16px; margin-bottom: 24px; }
-  .routine-ex-row { display: grid; grid-template-columns: 1fr 72px 28px; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .routine-ex-row { display: grid; grid-template-columns: 1fr 60px 60px 28px; gap: 8px; margin-bottom: 8px; align-items: center; }
   .routine-ex-row select, .routine-ex-row input { background: var(--bg); border: 1px solid var(--border2); padding: 8px 10px; font-size: 13px; color: var(--text); font-family: var(--ff-sans); outline: none; width: 100%; -webkit-appearance: none; }
   .btn-remove-ex { background: none; border: none; color: var(--text2); font-size: 16px; cursor: pointer; padding: 0; line-height: 1; }
   .btn-add-ex { background: none; border: 1px solid var(--border2); padding: 8px 14px; font-size: 12px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text2); cursor: pointer; font-family: var(--ff-sans); margin-top: 4px; }
@@ -658,7 +658,7 @@ function renderRoutines() {
           <button class="btn-del-routine" onclick="deleteRoutine(${r.id})">✕</button>
         </div>
       </div>
-      <div class="routine-card-exs">${r.exercises.map(e => `${e.exercise} &nbsp;×${e.reps}`).join('<br>')}</div>
+      <div class="routine-card-exs">${r.exercises.map(e => `${e.exercise} &nbsp;${e.sets}×${e.reps}`).join('<br>')}</div>
     </div>`).join('');
 }
 
@@ -669,6 +669,7 @@ function addRoutineExRow() {
   const allEx = Object.values(EXERCISES).flat().sort();
   row.innerHTML = `
     <select><option value="">Exercise...</option>${allEx.map(e => `<option>${e}</option>`).join('')}</select>
+    <input type="number" placeholder="Sets" min="1" max="20" inputmode="numeric">
     <input type="number" placeholder="Reps" min="1" max="100" inputmode="numeric">
     <button class="btn-remove-ex" onclick="this.parentElement.remove()">✕</button>`;
   wrap.appendChild(row);
@@ -680,9 +681,11 @@ function saveRoutine() {
   const rows = document.querySelectorAll('#routine-ex-rows .routine-ex-row');
   const exercises = [];
   rows.forEach(row => {
-    const ex   = row.querySelector('select').value;
-    const reps = parseInt(row.querySelector('input').value);
-    if (ex && reps) exercises.push({ exercise: ex, reps });
+    const ex      = row.querySelector('select').value;
+    const inputs  = row.querySelectorAll('input');
+    const sets    = parseInt(inputs[0].value);
+    const reps    = parseInt(inputs[1].value);
+    if (ex && reps) exercises.push({ exercise: ex, sets: sets || 1, reps });
   });
   if (!exercises.length) { showToast('Add at least one exercise'); return; }
   routines.push({ id: Date.now(), name, exercises });
@@ -717,7 +720,7 @@ function startWorkout(id) {
     return `
       <div class="workout-ex-block">
         <div class="workout-ex-name">${ex.exercise}</div>
-        <div class="workout-ex-meta">${ex.reps} rep${ex.reps > 1 ? 's' : ''} &nbsp;·&nbsp; ${hint}</div>
+        <div class="workout-ex-meta">${ex.sets} set${ex.sets > 1 ? 's' : ''} × ${ex.reps} rep${ex.reps > 1 ? 's' : ''} &nbsp;·&nbsp; ${hint}</div>
         <input class="workout-weight-input" type="number" inputmode="decimal" step="2.5" placeholder="${last ? last.weight : '—'}" data-exercise="${ex.exercise}" data-reps="${ex.reps}">
       </div>`;
   }).join('');
