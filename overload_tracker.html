@@ -253,7 +253,10 @@
 
   <div id="view-routines" class="view">
     <div class="new-routine-form">
-      <div class="section-label" style="margin-bottom:12px;">New Routine</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="section-label" style="margin-bottom:0;" id="routine-form-label">New Routine</div>
+        <button class="auth-bar-btn" id="routine-cancel-btn" style="display:none;" onclick="cancelEditRoutine()">Cancel</button>
+      </div>
       <div class="field" style="margin-bottom:12px;">
         <label>Routine Name</label>
         <input type="text" id="routine-name" placeholder="e.g. Push Day A">
@@ -261,7 +264,7 @@
       <div class="section-label" style="margin-bottom:8px;">Exercises</div>
       <div id="routine-ex-rows"></div>
       <button class="btn-add-ex" onclick="addRoutineExRow()">+ Add Exercise</button>
-      <button class="btn-save-routine" onclick="saveRoutine()">Save Routine</button>
+      <button class="btn-save-routine" id="routine-save-btn" onclick="saveRoutine()">Save Routine</button>
     </div>
     <div class="section-label" style="margin-bottom:12px;">My Routines</div>
     <div id="routines-list"></div>
@@ -658,6 +661,7 @@ function renderRoutines() {
         <div class="routine-card-name">${r.name}</div>
         <div class="routine-btns">
           <button class="btn-start" onclick="startWorkout(${r.id})">Start</button>
+          <button class="btn-del-routine" onclick="editRoutine(${r.id})">Edit</button>
           <button class="btn-del-routine" onclick="deleteRoutine(${r.id})">✕</button>
         </div>
       </div>
@@ -678,6 +682,41 @@ function addRoutineExRow() {
   wrap.appendChild(row);
 }
 
+let editingRoutineId = null;
+
+function editRoutine(id) {
+  const r = routines.find(r => r.id === id);
+  if (!r) return;
+  editingRoutineId = id;
+  document.getElementById('routine-name').value = r.name;
+  document.getElementById('routine-ex-rows').innerHTML = '';
+  r.exercises.forEach(ex => {
+    const wrap = document.getElementById('routine-ex-rows');
+    const row  = document.createElement('div');
+    row.className = 'routine-ex-row';
+    const allEx = Object.values(EXERCISES).flat().sort();
+    row.innerHTML = `
+      <select>${allEx.map(e => `<option${e === ex.exercise ? ' selected' : ''}>${e}</option>`).join('')}</select>
+      <input type="number" placeholder="Sets" min="1" max="20" inputmode="numeric" value="${ex.sets}">
+      <input type="number" placeholder="Reps" min="1" max="100" inputmode="numeric" value="${ex.reps}">
+      <button class="btn-remove-ex" onclick="this.parentElement.remove()">✕</button>`;
+    wrap.appendChild(row);
+  });
+  document.getElementById('routine-form-label').textContent = 'Edit Routine';
+  document.getElementById('routine-save-btn').textContent   = 'Update Routine';
+  document.getElementById('routine-cancel-btn').style.display = 'block';
+  document.getElementById('routine-name').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cancelEditRoutine() {
+  editingRoutineId = null;
+  document.getElementById('routine-name').value = '';
+  document.getElementById('routine-ex-rows').innerHTML = '';
+  document.getElementById('routine-form-label').textContent = 'New Routine';
+  document.getElementById('routine-save-btn').textContent   = 'Save Routine';
+  document.getElementById('routine-cancel-btn').style.display = 'none';
+}
+
 function saveRoutine() {
   const name = document.getElementById('routine-name').value.trim();
   if (!name) { showToast('Add a routine name'); return; }
@@ -691,12 +730,17 @@ function saveRoutine() {
     if (ex && reps) exercises.push({ exercise: ex, sets: sets || 1, reps });
   });
   if (!exercises.length) { showToast('Add at least one exercise'); return; }
-  routines.push({ id: Date.now(), name, exercises });
+  if (editingRoutineId) {
+    const idx = routines.findIndex(r => r.id === editingRoutineId);
+    if (idx !== -1) routines[idx] = { id: editingRoutineId, name, exercises };
+    showToast('Routine updated');
+  } else {
+    routines.push({ id: Date.now(), name, exercises });
+    showToast('Routine saved');
+  }
   saveRoutines();
   renderRoutines();
-  document.getElementById('routine-name').value = '';
-  document.getElementById('routine-ex-rows').innerHTML = '';
-  showToast('Routine saved');
+  cancelEditRoutine();
 }
 
 function deleteRoutine(id) {
@@ -786,6 +830,8 @@ window.addExercise             = addExercise;
 window.removeExercise          = removeExercise;
 window.addRoutineExRow         = addRoutineExRow;
 window.saveRoutine             = saveRoutine;
+window.editRoutine             = editRoutine;
+window.cancelEditRoutine       = cancelEditRoutine;
 window.deleteRoutine           = deleteRoutine;
 window.startWorkout            = startWorkout;
 window.cancelWorkout           = cancelWorkout;
