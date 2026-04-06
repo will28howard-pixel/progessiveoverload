@@ -118,6 +118,40 @@
   .ex-add-btn { background: none; border: 1px solid var(--border2); padding: 8px 14px; font-size: 12px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text2); cursor: pointer; font-family: var(--ff-sans); }
   .ex-add-btn:active { background: var(--bg3); }
 
+  /* ROUTINES */
+  .routine-card { background: var(--bg2); border: 1px solid var(--border2); padding: 16px; margin-bottom: 14px; }
+  .routine-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .routine-card-name { font-size: 15px; font-weight: 600; }
+  .routine-card-exs { font-size: 12px; color: var(--text2); line-height: 1.7; }
+  .routine-btns { display: flex; gap: 8px; flex-shrink: 0; }
+  .btn-start { background: var(--text); color: var(--bg); border: none; padding: 7px 14px; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; cursor: pointer; font-family: var(--ff-sans); }
+  .btn-start:active { opacity: 0.75; }
+  .btn-del-routine { background: none; border: 1px solid var(--border2); padding: 7px 10px; font-size: 12px; color: var(--text2); cursor: pointer; font-family: var(--ff-sans); }
+  .btn-del-routine:active { background: var(--bg3); }
+
+  .new-routine-form { background: var(--bg2); border: 1px solid var(--border2); padding: 16px; margin-bottom: 24px; }
+  .routine-ex-row { display: grid; grid-template-columns: 1fr 72px 28px; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .routine-ex-row select, .routine-ex-row input { background: var(--bg); border: 1px solid var(--border2); padding: 8px 10px; font-size: 13px; color: var(--text); font-family: var(--ff-sans); outline: none; width: 100%; -webkit-appearance: none; }
+  .btn-remove-ex { background: none; border: none; color: var(--text2); font-size: 16px; cursor: pointer; padding: 0; line-height: 1; }
+  .btn-add-ex { background: none; border: 1px solid var(--border2); padding: 8px 14px; font-size: 12px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text2); cursor: pointer; font-family: var(--ff-sans); margin-top: 4px; }
+  .btn-save-routine { background: var(--text); color: var(--bg); border: none; padding: 12px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; font-family: var(--ff-sans); width: 100%; margin-top: 12px; }
+
+  /* ACTIVE WORKOUT */
+  .workout-overlay { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 100; flex-direction: column; max-width: 600px; margin: 0 auto; }
+  .workout-overlay.active { display: flex; }
+  .workout-header { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--border2); flex-shrink: 0; }
+  .workout-title { font-size: 17px; font-weight: 600; }
+  .workout-date { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .btn-cancel-workout { background: none; border: none; font-size: 13px; color: var(--text2); cursor: pointer; font-family: var(--ff-sans); padding: 0; }
+  .workout-body { flex: 1; overflow-y: auto; padding: 16px; -webkit-overflow-scrolling: touch; }
+  .workout-ex-block { border: 1px solid var(--border2); padding: 14px; margin-bottom: 12px; }
+  .workout-ex-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .workout-ex-meta { font-size: 12px; color: var(--text2); margin-bottom: 10px; }
+  .workout-weight-input { width: 100%; background: var(--bg2); border: 1px solid var(--border2); padding: 11px 13px; font-size: 18px; font-family: var(--ff-mono); color: var(--text); outline: none; }
+  .workout-footer { padding: 16px; border-top: 1px solid var(--border2); flex-shrink: 0; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+  .btn-log-workout { width: 100%; background: var(--text); color: var(--bg); border: none; padding: 16px; font-size: 15px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; font-family: var(--ff-sans); }
+  .btn-log-workout:active { opacity: 0.75; }
+
   /* AUTH BAR */
   .auth-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text2); flex-shrink: 0; }
   .auth-bar-user { display: flex; align-items: center; gap: 7px; font-family: var(--ff-mono); font-size: 11px; }
@@ -214,11 +248,43 @@
     <div id="ex-list"></div>
   </div>
 
+  <div id="view-routines" class="view">
+    <div class="new-routine-form">
+      <div class="section-label" style="margin-bottom:12px;">New Routine</div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Routine Name</label>
+        <input type="text" id="routine-name" placeholder="e.g. Push Day A">
+      </div>
+      <div class="section-label" style="margin-bottom:8px;">Exercises</div>
+      <div id="routine-ex-rows"></div>
+      <button class="btn-add-ex" onclick="addRoutineExRow()">+ Add Exercise</button>
+      <button class="btn-save-routine" onclick="saveRoutine()">Save Routine</button>
+    </div>
+    <div class="section-label" style="margin-bottom:12px;">My Routines</div>
+    <div id="routines-list"></div>
+  </div>
+
   <nav class="nav">
     <button class="nav-tab active" onclick="showView('log', this)">Log</button>
+    <button class="nav-tab" onclick="showView('routines', this)">Routines</button>
     <button class="nav-tab" onclick="showView('dashboard', this)">Dashboard</button>
     <button class="nav-tab" onclick="showView('exercises', this)">Exercises</button>
   </nav>
+</div>
+
+<!-- Active workout overlay -->
+<div class="workout-overlay" id="workout-overlay">
+  <div class="workout-header">
+    <div>
+      <div class="workout-title" id="workout-title"></div>
+      <div class="workout-date" id="workout-date"></div>
+    </div>
+    <button class="btn-cancel-workout" onclick="cancelWorkout()">Cancel</button>
+  </div>
+  <div class="workout-body" id="workout-body"></div>
+  <div class="workout-footer">
+    <button class="btn-log-workout" onclick="logWorkout()">Log Workout</button>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -246,13 +312,14 @@ let cloudUnsub = null;
 async function saveToCloud() {
   if (!auth.currentUser) return;
   try {
-    await setDoc(doc(db, 'users', auth.currentUser.uid), { entries, exercises: EXERCISES });
+    await setDoc(doc(db, 'users', auth.currentUser.uid), { entries, exercises: EXERCISES, routines });
   } catch(e) { console.error('saveToCloud error', e); }
 }
 
 function applyCloudData(data) {
   if (data.entries)   { entries = data.entries;     localStorage.setItem('overload_entries',   JSON.stringify(entries));   renderLog(); syncDashExercises(); }
   if (data.exercises) { EXERCISES = data.exercises; localStorage.setItem('overload_exercises', JSON.stringify(EXERCISES)); renderExercises(); onGroupChange(); }
+  if (data.routines)  { routines = data.routines;   localStorage.setItem('overload_routines',  JSON.stringify(routines));  renderRoutines(); }
 }
 
 onAuthStateChanged(auth, async user => {
@@ -564,22 +631,150 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2000);
 }
 
+// ── ROUTINES ──────────────────────────────────────────────────────────────
+let routines = [];
+
+function loadRoutines() {
+  try { routines = JSON.parse(localStorage.getItem('overload_routines') || '[]'); } catch(e) { routines = []; }
+}
+
+function saveRoutines() {
+  try { localStorage.setItem('overload_routines', JSON.stringify(routines)); } catch(e) {}
+  saveToCloud();
+}
+
+function renderRoutines() {
+  const wrap = document.getElementById('routines-list');
+  if (!routines.length) {
+    wrap.innerHTML = '<div class="empty">No routines yet.<br>Create one above.</div>';
+    return;
+  }
+  wrap.innerHTML = routines.map(r => `
+    <div class="routine-card">
+      <div class="routine-card-header">
+        <div class="routine-card-name">${r.name}</div>
+        <div class="routine-btns">
+          <button class="btn-start" onclick="startWorkout(${r.id})">Start</button>
+          <button class="btn-del-routine" onclick="deleteRoutine(${r.id})">✕</button>
+        </div>
+      </div>
+      <div class="routine-card-exs">${r.exercises.map(e => `${e.exercise} &nbsp;×${e.reps}`).join('<br>')}</div>
+    </div>`).join('');
+}
+
+function addRoutineExRow() {
+  const wrap = document.getElementById('routine-ex-rows');
+  const row  = document.createElement('div');
+  row.className = 'routine-ex-row';
+  const allEx = Object.values(EXERCISES).flat().sort();
+  row.innerHTML = `
+    <select><option value="">Exercise...</option>${allEx.map(e => `<option>${e}</option>`).join('')}</select>
+    <input type="number" placeholder="Reps" min="1" max="100" inputmode="numeric">
+    <button class="btn-remove-ex" onclick="this.parentElement.remove()">✕</button>`;
+  wrap.appendChild(row);
+}
+
+function saveRoutine() {
+  const name = document.getElementById('routine-name').value.trim();
+  if (!name) { showToast('Add a routine name'); return; }
+  const rows = document.querySelectorAll('#routine-ex-rows .routine-ex-row');
+  const exercises = [];
+  rows.forEach(row => {
+    const ex   = row.querySelector('select').value;
+    const reps = parseInt(row.querySelector('input').value);
+    if (ex && reps) exercises.push({ exercise: ex, reps });
+  });
+  if (!exercises.length) { showToast('Add at least one exercise'); return; }
+  routines.push({ id: Date.now(), name, exercises });
+  saveRoutines();
+  renderRoutines();
+  document.getElementById('routine-name').value = '';
+  document.getElementById('routine-ex-rows').innerHTML = '';
+  showToast('Routine saved');
+}
+
+function deleteRoutine(id) {
+  if (!confirm('Delete this routine?')) return;
+  routines = routines.filter(r => r.id !== id);
+  saveRoutines();
+  renderRoutines();
+}
+
+// ── ACTIVE WORKOUT ────────────────────────────────────────────────────────
+let activeRoutine = null;
+
+function startWorkout(id) {
+  activeRoutine = routines.find(r => r.id === id);
+  if (!activeRoutine) return;
+
+  document.getElementById('workout-title').textContent = activeRoutine.name;
+  document.getElementById('workout-date').textContent  = new Date().toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
+
+  const body = document.getElementById('workout-body');
+  body.innerHTML = activeRoutine.exercises.map((ex, i) => {
+    const last = entries.find(e => e.exercise === ex.exercise && e.reps === ex.reps);
+    const hint = last ? `Last: ${last.weight} lbs` : 'No history';
+    return `
+      <div class="workout-ex-block">
+        <div class="workout-ex-name">${ex.exercise}</div>
+        <div class="workout-ex-meta">${ex.reps} rep${ex.reps > 1 ? 's' : ''} &nbsp;·&nbsp; ${hint}</div>
+        <input class="workout-weight-input" type="number" inputmode="decimal" step="2.5" placeholder="${last ? last.weight : '—'}" data-exercise="${ex.exercise}" data-reps="${ex.reps}">
+      </div>`;
+  }).join('');
+
+  document.getElementById('workout-overlay').classList.add('active');
+}
+
+function cancelWorkout() {
+  document.getElementById('workout-overlay').classList.remove('active');
+  activeRoutine = null;
+}
+
+function logWorkout() {
+  const inputs = document.querySelectorAll('.workout-weight-input');
+  const date   = today();
+  let logged   = 0;
+  inputs.forEach(input => {
+    const weight = parseFloat(input.value);
+    const reps   = parseInt(input.dataset.reps);
+    const exercise = input.dataset.exercise;
+    if (!weight) return;
+    const group = Object.entries(EXERCISES).find(([, exs]) => exs.includes(exercise))?.[0] || '';
+    entries.unshift({ id: Date.now() + logged, date, group, exercise, reps, weight, orm: orm(reps, weight), notes: '' });
+    logged++;
+  });
+  if (!logged) { showToast('Enter at least one weight'); return; }
+  saveEntries();
+  renderLog();
+  syncDashExercises();
+  cancelWorkout();
+  showToast(`Logged ${logged} exercise${logged > 1 ? 's' : ''}`);
+}
+
 // Expose functions to HTML onclick handlers
-window.onGroupChange         = onGroupChange;
+window.onGroupChange           = onGroupChange;
 window.updateWeightPlaceholder = updateWeightPlaceholder;
-window.logEntry              = logEntry;
-window.clearEntry            = clearEntry;
-window.deleteEntry           = deleteEntry;
-window.renderDashboard       = renderDashboard;
-window.showView              = showView;
-window.addExercise           = addExercise;
-window.removeExercise        = removeExercise;
+window.logEntry                = logEntry;
+window.clearEntry              = clearEntry;
+window.deleteEntry             = deleteEntry;
+window.renderDashboard         = renderDashboard;
+window.showView                = showView;
+window.addExercise             = addExercise;
+window.removeExercise          = removeExercise;
+window.addRoutineExRow         = addRoutineExRow;
+window.saveRoutine             = saveRoutine;
+window.deleteRoutine           = deleteRoutine;
+window.startWorkout            = startWorkout;
+window.cancelWorkout           = cancelWorkout;
+window.logWorkout              = logWorkout;
 
 loadExercises();
 loadEntries();
+loadRoutines();
 document.getElementById('entry-date').value = today();
 renderLog();
 renderExercises();
+renderRoutines();
 syncDashExercises();
 
 if ('serviceWorker' in navigator) {
