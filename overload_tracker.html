@@ -147,7 +147,10 @@
   .workout-ex-block { border: 1px solid var(--border2); padding: 14px; margin-bottom: 12px; }
   .workout-ex-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
   .workout-ex-meta { font-size: 12px; color: var(--text2); margin-bottom: 10px; }
-  .workout-weight-input { width: 100%; background: var(--bg2); border: 1px solid var(--border2); padding: 11px 13px; font-size: 18px; font-family: var(--ff-mono); color: var(--text); outline: none; }
+  .workout-sets { display: flex; flex-direction: column; gap: 6px; }
+  .workout-set-row { display: grid; grid-template-columns: 48px 1fr; gap: 8px; align-items: center; }
+  .workout-set-label { font-size: 11px; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text2); }
+  .workout-weight-input { width: 100%; background: var(--bg2); border: 1px solid var(--border2); padding: 10px 12px; font-size: 17px; font-family: var(--ff-mono); color: var(--text); outline: none; }
   .workout-footer { padding: 16px; border-top: 1px solid var(--border2); flex-shrink: 0; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
   .btn-log-workout { width: 100%; background: var(--text); color: var(--bg); border: none; padding: 16px; font-size: 15px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; font-family: var(--ff-sans); }
   .btn-log-workout:active { opacity: 0.75; }
@@ -716,12 +719,19 @@ function startWorkout(id) {
   const body = document.getElementById('workout-body');
   body.innerHTML = activeRoutine.exercises.map((ex, i) => {
     const last = entries.find(e => e.exercise === ex.exercise && e.reps === ex.reps);
-    const hint = last ? `Last: ${last.weight} lbs` : 'No history';
+    const hint = last ? `Last top set: ${last.weight} lbs` : 'No history';
+    const setInputs = Array.from({ length: ex.sets }, (_, s) => `
+      <div class="workout-set-row">
+        <div class="workout-set-label">Set ${s + 1}</div>
+        <input class="workout-weight-input" type="number" inputmode="decimal" step="2.5"
+          placeholder="${last ? last.weight : '—'}"
+          data-exercise="${ex.exercise}" data-reps="${ex.reps}" data-ex-index="${i}">
+      </div>`).join('');
     return `
       <div class="workout-ex-block">
         <div class="workout-ex-name">${ex.exercise}</div>
-        <div class="workout-ex-meta">${ex.sets} set${ex.sets > 1 ? 's' : ''} × ${ex.reps} rep${ex.reps > 1 ? 's' : ''} &nbsp;·&nbsp; ${hint}</div>
-        <input class="workout-weight-input" type="number" inputmode="decimal" step="2.5" placeholder="${last ? last.weight : '—'}" data-exercise="${ex.exercise}" data-reps="${ex.reps}">
+        <div class="workout-ex-meta">${ex.sets} × ${ex.reps} rep${ex.reps > 1 ? 's' : ''} &nbsp;·&nbsp; ${hint}</div>
+        <div class="workout-sets">${setInputs}</div>
       </div>`;
   }).join('');
 
@@ -736,22 +746,32 @@ function cancelWorkout() {
 function logWorkout() {
   const inputs = document.querySelectorAll('.workout-weight-input');
   const date   = today();
-  let logged   = 0;
+
+  // Group sets by exercise, find top weight per exercise
+  const topSets = {};
   inputs.forEach(input => {
-    const weight = parseFloat(input.value);
-    const reps   = parseInt(input.dataset.reps);
+    const weight   = parseFloat(input.value);
     const exercise = input.dataset.exercise;
+    const reps     = parseInt(input.dataset.reps);
     if (!weight) return;
-    const group = Object.entries(EXERCISES).find(([, exs]) => exs.includes(exercise))?.[0] || '';
-    entries.unshift({ id: Date.now() + logged, date, group, exercise, reps, weight, orm: orm(reps, weight), notes: '' });
-    logged++;
+    if (!topSets[exercise] || weight > topSets[exercise].weight) {
+      topSets[exercise] = { exercise, reps, weight };
+    }
   });
-  if (!logged) { showToast('Enter at least one weight'); return; }
+
+  const exList = Object.values(topSets);
+  if (!exList.length) { showToast('Enter at least one weight'); return; }
+
+  exList.forEach((s, i) => {
+    const group = Object.entries(EXERCISES).find(([, exs]) => exs.includes(s.exercise))?.[0] || '';
+    entries.unshift({ id: Date.now() + i, date, group, exercise: s.exercise, reps: s.reps, weight: s.weight, orm: orm(s.reps, s.weight), notes: '' });
+  });
+
   saveEntries();
   renderLog();
   syncDashExercises();
   cancelWorkout();
-  showToast(`Logged ${logged} exercise${logged > 1 ? 's' : ''}`);
+  showToast(`Logged ${exList.length} exercise${exList.length > 1 ? 's' : ''}`);
 }
 
 // Expose functions to HTML onclick handlers
